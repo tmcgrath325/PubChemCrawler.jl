@@ -116,6 +116,18 @@ BrokenRecord.configure!(;
         parse(Float32, flds[2]) != 0 &&
         parse(Float32, flds[3]) != 0
 
+    # conformer files (SDFs)
+    sleep(5.0 * get_recordings)
+    sdfs = String.(playback(() -> get_conformers_for_cid(2244, 5), "aspirin_conformers.bson"))
+    @test length(sdfs) == 5
+    @test length(unique(sdfs)) == 5
+    for sdf in sdfs
+        @test occursin("PUBCHEM_MMFF94_PARTIAL_CHARGES", sdf)
+        line = split(sdf, '\n')[5]
+        flds = split(line)
+        @test parse(Float32, flds[1]) != 0 && parse(Float32, flds[2]) != 0 && parse(Float32, flds[3]) != 0
+    end
+
     # parent compounds (sodium acetate is 517045, acetic acid is 176)
     sleep(5.0 * get_recordings)
     str = String(
