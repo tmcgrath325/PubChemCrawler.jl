@@ -240,14 +240,15 @@ Retrieve 3D records for up to `n` conformers for a compound specified by its `ci
 "n" conformers selected represent the overall diversity of the conformer model for a compound. A description of PubChem's diverse 
 conformer ordering can be found at https://pubchem.ncbi.nlm.nih.gov/release3d.html. 
 # Example
-````
+```
 julia> sdfs = get_conformers_for_cid(get_cid(name="aspirin"), 5);   # get data for the first 5 conformers for aspirin
+
 julia> for (i,sdf) in enumerate(sdfs)   # save the 3d SDF files for each retrieved conformer
            open("tmp/aspirin_conf"*string(i)*"_3d.sdf", "w") do io
                write(io, sdf)
            end
        end
-````
+```
 """
 function get_conformers_for_cid(cid, n = Inf)
     url = prolog * "compound/cid/" * string(cid) * "/conformers/XML"
