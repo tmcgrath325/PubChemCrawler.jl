@@ -257,7 +257,7 @@ function get_conformers_for_cid(cid, n = Inf)
     confids = []
     for c in child_nodes(xroot)
         if is_elementnode(c)
-            e = XMLElement(c) 
+            e = XMLElement(c)
             els = get_elements_by_tagname(e, "ConformerID")
             for (i,el) in enumerate(els)
                 i > n && break
