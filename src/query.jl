@@ -1,5 +1,18 @@
 const prolog = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/"
 
+const _READTIMEOUT_KW = pkgversion(HTTP) < v"2" ? :readtimeout : :read_idle_timeout
+
+# `HTTP.request` with PubChem/NCBI defaults suited to a crawler.
+# Under HTTP/2 every request to a host multiplexes over one shared connection,
+# so a single  wedged connection stalls every subsequent request;
+# pin HTTP/1.1, whose independent pooled connections confine a stall to the one request.
+# Bound the read-inactivity time to avoid an indefinite stall.
+function _http_request(args...; readtimeout=60, kwargs...)
+    default_kw = pkgversion(HTTP) < v"2" ? (; _READTIMEOUT_KW => readtimeout) :
+                                           (; _READTIMEOUT_KW => readtimeout, protocol = :h1)
+    return HTTP.request(args...; default_kw..., kwargs...)
+end
+
 """
     get_cids(; name=nothing, smiles=nothing, cas_number=nothing,kwargs...)
 
@@ -36,7 +49,7 @@ function get_cids(; name=nothing, smiles=nothing, cas_number=nothing, kwargs...)
     smiles !== nothing && (input *= "smiles/$((smiles))/")
     cas_number !== nothing && (input *= "xref/RN/$(cas_number)/")
     url = prolog * input * "cids/TXT"
-    r = HTTP.request("GET", url; kwargs...)
+    r = _http_request("GET", url; kwargs...)
     return parse.(Int, split(chomp(String(r.body)), '\n'))
 end
 
@@ -118,7 +131,7 @@ function query_substructure(;
     end
     props = canonicalize_properties("property/" * properties)
     url = prolog * input * props * output * "?StripHydrogen=true"
-    r = HTTP.request("GET", url; kwargs...)
+    r = _http_request("GET", url; kwargs...)
     return r.body
 end
 
@@ -209,7 +222,7 @@ function get_for_cids(
     if record_type !== nothing
         url *= "?record_type=" * record_type
     end
-    r = HTTP.request(
+    r = _http_request(
         "POST",
         url,
         ["Content-Type"=>"application/x-www-form-urlencoded"],
@@ -270,7 +283,7 @@ function pug(
     pug_string = join(string.(args), "/")
     url = prolog * pug_string
     silent || @info url
-    r = HTTP.request("GET", url; status_exception, kwargs...)
+    r = _http_request("GET", url; status_exception, kwargs...)
     b = return_text ? chomp(String(r.body)) : r.body
     return b
 end
@@ -301,6 +314,6 @@ function get_synonyms(;
         throw(ArgumentError("one of name, cid, or smiles must be specified"))
     end
     url = prolog * input * "synonyms/TXT"
-    r = HTTP.request("GET", url; kwargs...)
+    r = _http_request("GET", url; kwargs...)
     return split(chomp(String(r.body)), "\n")
 end

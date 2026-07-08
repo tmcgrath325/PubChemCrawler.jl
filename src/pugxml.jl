@@ -176,7 +176,7 @@ function get_entrez(top)
 end
 
 function submit_substructure_query(xdoc; poll_interval=10, kwargs...)
-    r = HTTP.request(
+    r = _http_request(
         "POST", "https://pubchem.ncbi.nlm.nih.gov/pug/pug.cgi", [], string(xdoc); kwargs...
     )
     xresp = parse_string(String(r.body))
@@ -190,7 +190,7 @@ function submit_substructure_query(xdoc; poll_interval=10, kwargs...)
             free(xresp)
             sleep(poll_interval)
             # poll for completion
-            r = HTTP.request(
+            r = _http_request(
                 "POST",
                 "https://pubchem.ncbi.nlm.nih.gov/pug/pug.cgi",
                 [],
@@ -215,7 +215,7 @@ function submit_substructure_query(xdoc; poll_interval=10, kwargs...)
     url *= "&query_key=" * content(entrez["PCT-Entrez_query-key"][1])
     url *= "&WebEnv=" * content(entrez["PCT-Entrez_webenv"][1])
     free(xresp)
-    r = HTTP.request("GET", url)
+    r = _http_request("GET", url; kwargs...)
     return parse.(Int, split(chomp(String(r.body)), '\n'))
     # xdl = create_download(entrez; format=format)
     # r = HTTP.request("POST", "https://pubchem.ncbi.nlm.nih.gov/pug/pug.cgi", [], string(xdl); kwargs...)
