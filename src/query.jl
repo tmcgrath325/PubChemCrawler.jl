@@ -235,10 +235,16 @@ end
 get_for_cids(cid::Int; kwargs...) = get_for_cids([cid]; kwargs...)
 
 """
-    sdfs = get_conformers_for_cid(cid, n = Inf)
+    sdfs = get_conformers_for_cid(cid, n = Inf; sleep_interval = 0.2, readtimeout = 60)
 Retrieve 3D records for up to `n` conformers for a compound specified by its `cid`. Conformer ordering is such that the first
-"n" conformers selected represent the overall diversity of the conformer model for a compound. A description of PubChem's diverse 
-conformer ordering can be found at https://pubchem.ncbi.nlm.nih.gov/release3d.html. 
+"n" conformers selected represent the overall diversity of the conformer model for a compound. A description of PubChem's diverse
+conformer ordering can be found at https://pubchem.ncbi.nlm.nih.gov/release3d.html.
+
+`readtimeout` (seconds) bounds how long a single request waits without receiving
+data before failing; the default guards against a stalled connection. Requests
+default to HTTP/1.1 so that a stalled connection cannot block unrelated requests.
+Additional keyword arguments are forwarded to `HTTP.request` and override these
+defaults (e.g. `protocol = :auto`).
 # Example
 ```
 julia> sdfs = get_conformers_for_cid(get_cid(name="aspirin"), 5);   # get data for the first 5 conformers for aspirin
@@ -250,10 +256,10 @@ julia> for (i,sdf) in enumerate(sdfs)   # save the 3d SDF files for each retriev
        end
 ```
 """
-function get_conformers_for_cid(cid, n = Inf)
+function get_conformers_for_cid(cid, n = Inf; sleep_interval = 0.2, readtimeout = 60, kwargs...)
     url = prolog * "compound/cid/" * string(cid) * "/conformers/XML"
-    r = HTTP.request("GET", url)
-    xdoc = parse_string(String(r.body)) 
+    r = _http_request("GET", url; readtimeout, kwargs...)
+    xdoc = parse_string(String(r.body))
     xroot = root(xdoc)
     confids = []
     for c in child_nodes(xroot)
@@ -268,8 +274,9 @@ function get_conformers_for_cid(cid, n = Inf)
     end
     confsdfs = []
     for confid in confids
+        sleep(sleep_interval)
         confurl = prolog * "conformers/" * string(confid) * "/SDF"
-        confr = HTTP.request("GET", confurl)
+        confr = _http_request("GET", confurl; readtimeout, kwargs...)
         push!(confsdfs, confr.body)
     end
     return confsdfs
