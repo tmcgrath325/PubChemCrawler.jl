@@ -38,8 +38,11 @@ const get_recordings = !all(isfile, allrecordings)
 if !isdir("http_record")
     mkdir("http_record")
 end
+# `ignore_headers` are stripped from the request when it is recorded, not merely when it is
+# compared. "Host" must stay out of this list: playback reads the recorded `Host` header to
+# check that the request targets the expected server.
 BrokenRecord.configure!(;
-    path="http_record", ignore_headers=["User-Agent", "Host", "Accept-Encoding"]
+    path="http_record", ignore_headers=["User-Agent", "Accept-Encoding", "Cookie"]
 )
 
 @testset "PubChemCrawler.jl" begin
